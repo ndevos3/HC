@@ -1,0 +1,203 @@
+import win32com
+import win32com.client as win32
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import warnings
+import os
+import time
+import logging
+import random
+
+#configure logging (add a file handler for failed urls and errors)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+failed_urls_handler = logging.FileHandler('failed_urls.log')
+failed_urls_handler.setLevel(logging.ERROR) #Only log errors to this file
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+failed_urls_handler.setFormatter(formatter)
+logging.getLogger().addHandler(failed_urls_handler)
+
+debug = False
+
+# Chrome options
+chrome_options = webdriver.ChromeOptions()
+chrome_options.add_argument('--no-sandbox')
+warnings.filterwarnings('ignore')
+
+# to suppress the error messages/logs
+chrome_options.add_experimental_option('excludeSwitches', ['enable-logging']) 
+# make sure to update the chrome drive from https://storage.googleapis.com/chrome-for-testing-public/128.0.6613.114/win64/chromedriver-win64.zip where 128.0.6613.114 is the version of the chrome browser
+chromedriver_path = "C:\\vis\\codes\\chromedriver.exe"
+service = Service(chromedriver_path)
+
+# Define dr outside the try block
+dr = webdriver.Chrome(service=service, options=chrome_options) 
+
+dashboard_urls = [
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2024%20P703%20Gnome%20vehicle_DCV",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20S650%20FP%20GT500%20vehicle_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2028%20P736%20platform_UNV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20P800%20Revo%20vehicle_UPV2",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2028%20H567%2FVN127%2FF5x%20ICA%20platform_UNV2",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2028%20H567%2FVN127%2FF5x%20ICA%20platform_TDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20U725%20Special%20Edition%20Mackinaw%20J2_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2029%20P768%20base%20platform_UNV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20S650%20FP%20GT500%20convertible%20vehicle_UPV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2028%20V363N%20ICA%20FIE%20platform_UNV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2028%20V363N%20ICA%20FIE%20platform_UNV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20U625%20ICA%20Tremor%20Micro_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20P702%20ICA%20Emissions%20Platform_UNV2",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20P800%20DQA%20Batch%201%20Crew%20Cab_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20P703N%20B1.8%20base%20vehicle_UNV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20P703N%20B1.8%20base%20vehicle_UPV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20P703A%20B1.8%20base%20vehicle_UNV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20U704%20ICA%202.7L%20Nano_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20V801N%20Wave1%20vehicle_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027.5%20VE1%20EU%20DRW%20platform_UNV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026.5%20V363%20PT%20Quality%20(timing)_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026.5%20V710%20PT%20Quality%20(timing)_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20Cx740%20ICA%20Bundle1_UPV2",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20CX483C%20ICA2_UPV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2025%20CD542%20MCA%20vehicle_UPV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2025%20CD542%20MCA%20vehicle_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2025%20U625C%20ICA%20vehicle_UPV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20U725C%20ICA_UPV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20CX483C%20ICA2_UPV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20CX483C%20ICA2_UPV2",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2026%20CX483C%20ICA2_FDJ",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20CX483N_UNV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20CX483N_UNV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20CX483N_UPV0",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20CX483N_UNV2",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%20CX483N_UPV1",
+    "https://www.qlik.ford.com/sense/app/d188b626-5c28-431d-8a24-41bafb9d990b/sheet/3410cdc3-5ad5-4c4f-abc9-1554f28cb461/state/analysis/select/Program_Gateway/2027%202027%20CDX707%20MCA%20tophat_UPV0",
+
+    # Add your other dashboard URLs here...  (Add the rest of your URLs)
+]
+
+def login(driver):
+    try:
+        WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.ID, "i0116"))).click()
+        email_input = driver.find_element(By.ID, "i0116")
+        email_input.send_keys(f"{os.getlogin()}@ford.com")  # Consider loading this from config file
+        next_butn = WebDriverWait(driver, 30).until(EC.element_to_be_clickable((By.ID, "idSIButton9")))
+        next_butn.click()
+        time.sleep(10)  # Consider using explicit wait here
+        logging.info("Login successful.")
+    except Exception as e:
+        logging.error(f"Login failed: {e}")
+        raise
+
+
+try:
+    url_list = []
+    max_retries = 3
+    for url in dashboard_urls:
+        retries = 0
+        while retries < max_retries:
+            try:
+                dr.get(url)
+                dr.maximize_window()
+
+                if dr.find_elements(By.ID, "i0116"):
+                    login(dr)
+
+                WebDriverWait(dr, 50).until(EC.presence_of_element_located((By.XPATH, "//span[contains(text(),'Milestone')]")))
+                WebDriverWait(dr, 30).until(EC.presence_of_element_located((By.XPATH, "//vzb-chart-legend-item//span[contains(text(), 'ModelBuildTarget')]"))
+                )
+                WebDriverWait(dr, 10, EC.invisibility_of_element_located((By.CLASS_NAME, "vzb-x-loading-indicator__spinner")))
+                WebDriverWait(dr, 10, EC.invisibility_of_element_located((By.CLASS_NAME, "vzb-x-loading-indicator"))) # Wait for the loading indicator to disappear
+                # Add a 10-second wait AFTER the WebDriverWaits.
+                time.sleep(10)
+                today = time.strftime("%m%d")
+                filename_base = url.split("/")[-1].replace("%20", " ")
+                screenshot_filename = f"{filename_base}_{today}.png"
+                txt_filename = f"{filename_base}_{today}.txt"
+
+                if os.path.exists(screenshot_filename):
+                    os.remove(screenshot_filename)
+
+                dr.save_screenshot(screenshot_filename)
+                time.sleep(5)  # Consider using explicit wait here
+                logging.info(f"Screenshot saved as {screenshot_filename}")
+
+                outer_html = dr.find_element(By.ID, "KPgxqPW_content").get_attribute("textContent")
+                with open(txt_filename, "w") as f:
+                    f.write(outer_html)
+                    logging.info(f"Text data saved for {url}")
+                url_list.append(url)
+                break  # Exit retry loop only after successful completion
+            except Exception as e:
+                retries += 1
+                logging.error(f"Error processing URL {url}, attempt {retries}/{max_retries}: {e}")
+                if retries < max_retries:
+                    wait_time = 2**retries + random.uniform(0, 1)
+                    logging.info(f"Retrying {url} in {wait_time:.1f} seconds...")
+                    time.sleep(wait_time)
+                else:
+                    logging.error(f"Maximum retries exceeded for URL {url}. Skipping.")
+                    # Log the failed URL to the file handler
+                    logging.getLogger('failed_urls').error(f"Maximum retries exceeded for URL {url}. Skipping.")
+
+
+
+    # PowerPoint generation
+    try:
+        # Get names of png and txt files
+        screenshotpng = [f for f in os.listdir() if f.endswith(".png") and not f.startswith("BullseyeCoverageError") and not f.startswith("UserMapLogFile")]
+        bumpersticker = [f for f in os.listdir() if f.endswith(".txt") and not f.startswith("BullseyeCoverageError") and not f.startswith("UserMapLogFile")]
+
+        if len(screenshotpng) != len(bumpersticker):
+            raise Exception("Number of screenshots and bumper stickers do not match")
+
+        ppt = win32com.client.Dispatch("PowerPoint.Application")
+        ppt.Visible = True
+        presentation = ppt.Presentations.Add()
+
+        for url in url_list:
+            filename_base = url.split("/")[-1].replace("%20", " ")
+            png_filename = f"{filename_base}_{today}.png"
+            txt_filename = f"{filename_base}_{today}.txt"
+
+            png_index = screenshotpng.index(png_filename)
+            txt_index = bumpersticker.index(txt_filename)
+            if png_index != txt_index:
+                raise Exception(f"Mismatch between PNG and TXT file indices for URL: {url}")
+
+            slide = presentation.Slides.Add(len(presentation.Slides) + 1, 1)
+            picture = slide.Shapes.AddPicture(os.path.abspath(screenshotpng[png_index]), LinkToFile=False,
+                                              SaveWithDocument=True, Left=0, Top=0, Width=959, Height=600)
+            picture.PictureFormat.CropTop = 45
+            picture.PictureFormat.CropBottom = 120
+            picture.PictureFormat.CropRight = 20
+            picture.Width = 959
+            picture.Height = 376
+            picture.Top = 0
+            textbox = slide.Shapes.AddTextbox(Orientation=1, Left=0, Top=388, Width=959, Height=152)
+            textbox.Fill.BackColor.RGB = 0x602000
+            textbox.TextFrame.TextRange.Font.Size = 8
+            textbox.TextFrame.TextRange.Font.Color.RGB = 0xFFFFFF
+            with open(bumpersticker[txt_index], "r") as f:
+                textbox.TextFrame.TextRange.Text = f.read()
+
+        if os.path.exists("QlikHC.pptx"):
+            os.remove("QlikHC.pptx")
+        presentation.SaveAs(os.path.abspath("QlikHC.pptx"))
+        print("Powerpoint presentation saved as QlikHC.pptx")
+        ppt.Quit()
+
+    except Exception as e:
+        logging.error(f"Error generating PowerPoint: {e}")
+        import traceback
+        traceback.print_exc()
+
+except Exception as e:
+    logging.critical(f"A critical error occurred: {e}")
+    import traceback
+    traceback.print_exc()
+
+finally:
+    if dr:
+        dr.quit()
